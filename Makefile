@@ -11,7 +11,7 @@ TARGET=pipe-speed
 
 
 # Компиляторы
-GCC=gcc -Wall
+GCC=gcc -Wall -std=c99
 
 # Объектные файлы
 OBJS=$(SRCS_C:.c=.o)

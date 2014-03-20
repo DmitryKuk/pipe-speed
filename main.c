@@ -16,23 +16,38 @@ sem_t *sem;
 
 #define LOG_DELIM " "	// Строка-разделитель для log_data
 
+// Приводилка размеров
+#define MAKE_HUMAN_LIKE(number, counter) \
+	do { \
+		for (counter = 0; number >= 1000 && counter < sizeof(size_suffix); ++counter) number /= 1024; \
+	} while (0)
 
-void log_data(size_t id,							// test id (number)
-			  double si,  double sih,  char sihs,	// size
-			  double sp,  double sph,  char sphs,	// speed
-			  double ti,							// time
-			  double tsi, double tsih, char tsihs,	// total size
-			  double tsp, double tsph, char tsphs,	// total speed
-			  double tti)							// total time
+
+void log_data(char use_terminal, size_t test_id, size_t data_size, double time_diff, double total_size, double total_time)
 {
-	// id size speed time tsize tspeed ttime
-	// 	sih|sihs|B sph|sphs|B/s
-	// 	tsih|tsihs|B tsph|tsphs|B/s
-	printf("%zu"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf%c"LOG_DELIM"%lf%c"LOG_DELIM"%lf%c"LOG_DELIM"%lf%c",
-			id, si, sp, ti,
-			tsi, tsp, tti,
-			sih, sihs, sph, sphs,
-			tsih, tsihs, tsph, tsphs);
+	double size = data_size,									// i
+		   speed = size / time_diff,	speed_old = speed,		// j
+		   tsize = total_size,									// k
+		   tspeed = tsize / total_time,	tspeed_old = tspeed;	// t
+	
+	static const char size_suffix[] = "\0KMGP";	// B, KB, MB, GB, PB
+	char i, j, k, t;
+	
+	MAKE_HUMAN_LIKE(size,	i);
+	MAKE_HUMAN_LIKE(speed,	j);
+	MAKE_HUMAN_LIKE(tsize,	k);
+	MAKE_HUMAN_LIKE(tspeed,	t);
+	
+	if (use_terminal)
+		printf("%8zu: Speed: %9.6lf%cB/s,  time: %10.6lfs,  size: %7.3lf%cB\nTotal:    Speed: %9.6lf%cB/s,  time: %10.6lfs,  size: %7.3lf%cB\n\n",
+			   test_id, speed, size_suffix[(int)j], time_diff, size, size_suffix[(int)i],	// Текущий test
+			   tspeed, size_suffix[(int)t], total_time, tsize, size_suffix[(int)k]);		// Общее
+	else
+		printf("%zu"LOG_DELIM"%zu"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf"LOG_DELIM"%lf%cB"LOG_DELIM"%lf%cB/s"LOG_DELIM"%lf%cB"LOG_DELIM"%lf%cB/s\n",
+			   test_id, data_size, speed_old, time_diff,
+			   total_size, tspeed_old, total_time,
+			   size, size_suffix[(int)i], speed, size_suffix[(int)j],
+			   tsize, size_suffix[(int)k], tspeed, size_suffix[(int)t]);
 }
 
 
@@ -233,10 +248,9 @@ int main(int argc, const char **argv)
 					status = 1;
 					break;
 				}
+	child_end:
 #endif	// SIMPLE_ALGO
 		
-		
-	child_end:
 		close(fd[1]);
 		sem_close(sem);
 	} else {	// Код родителя
@@ -272,34 +286,8 @@ int main(int argc, const char **argv)
 			total_size += data_size;
 			total_time += time_diff;
 			
-			
 			// Печать отчёта
-			{
-				static char size_suffix[] = "\0KMGP";
-				
-				char i, j, k, t;
-				double tsize	= total_size,					tsize_old	= tsize,
-					   tspeed	= total_size / total_time,		tspeed_old	= tspeed,
-					   size		= data_size,					size_old	= size,
-					   speed	= data_size / time_diff,		speed_old	= speed;
-				
-				for (i = 0; tsize	>= 1000 && i < sizeof(size_suffix); ++i) tsize /= 1024;
-				for (j = 0; tspeed	>= 1000 && j < sizeof(size_suffix); ++j) tspeed /= 1024;
-				for (k = 0; size	>= 1000 && k < sizeof(size_suffix); ++k) size /= 1024;
-				for (t = 0; speed	>= 1000 && t < sizeof(size_suffix); ++t) speed /= 1024;
-				
-				if (use_terminal) {
-					printf("Test:   Speed: %9.6lf%cB/s,  time: %10.6lfs,  size: %7.3lf%cB,  test #%zu\n", speed, size_suffix[(int)t], time_diff, size, size_suffix[(int)k], test_id);
-					printf("Total:  Speed: %9.6lf%cB/s,  time: %10.6lfs,  size: %7.3lf%cB\n\n", tspeed, size_suffix[(int)j], total_time, tsize, size_suffix[(int)i]);
-				} else
-					log_data(test_id,						// test id (number)
-						size_old,	size,	size_suffix[(int)k],	// size
-						speed_old,	speed,	size_suffix[(int)t],	// speed
-						time_diff,							// time
-						tsize_old,	tsize,	size_suffix[(int)i],	// total size
-						tspeed_old,	tspeed,	size_suffix[(int)j],	// total speed
-						total_time);						// total time
-			}
+			log_data(use_terminal, test_id, data_size, time_diff, total_size, total_time);
 			
 			++test_id;
 		}
