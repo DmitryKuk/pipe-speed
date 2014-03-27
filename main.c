@@ -9,7 +9,7 @@
 
 #define LOG_DELIM " "	// Строка-разделитель для log_data
 
-static const char size_suffix[] = "_KMGP";	// _B, KB, MB, GB, PB
+static const char size_suffix[] = "BKMGTP";
 
 // Приводилка размеров для log_data
 // double number, char suffix_counter
@@ -62,10 +62,10 @@ void log_data(char use_terminal, size_t test_id, size_t data_size, size_t block_
 	make_human_like(&bsize,	&k);
 	
 	if (use_terminal)	// Скорость, размер блока, размер данных, врема передачи данных
-		printf("%8zu: Speed: %10.6lf%cB/s,  block: %8.3lf%cB,  size: %8.3lf%cB,  time: %12.6lfs\n",
+		printf("%8zu: Speed: %10.6lf%c/s,  block: %8.3lf%c,  size: %8.3lf%c,  time: %12.6lfs\n",
 			   test_id, speed, size_suffix[(int)j], bsize, size_suffix[(int)k], size, size_suffix[(int)i], time_diff);
 	else	// Скорость, размер блока, размер данных, врема передачи данных + всё то же в человеческом формате
-		printf("%zu"LOG_DELIM"%lf"LOG_DELIM"%ld"LOG_DELIM"%ld"LOG_DELIM"%lf"LOG_DELIM"%lf%cB/s"LOG_DELIM"%lf%cB"LOG_DELIM"%lf%cB"LOG_DELIM"%lfs\n",
+		printf("%zu"LOG_DELIM"%lf"LOG_DELIM"%ld"LOG_DELIM"%ld"LOG_DELIM"%lf"LOG_DELIM"%lf%c/s"LOG_DELIM"%lf%c"LOG_DELIM"%lf%c"LOG_DELIM"%lfs\n",
 			   test_id, speed_old, block_size, data_size, time_diff,	// Для автоматической обработки
 			   speed, size_suffix[(int)j], bsize, size_suffix[(int)k], size, size_suffix[(int)i], time_diff);	// Для человека
 }
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
 		} else goto child_end;
 		
 		if (lower == 0) lower += inc;
-		for (; lower < upper; lower += inc) {
+		for (; lower <= upper; lower += inc) {
 			if (write_data(fd[1], sem, data_size, lower) != 0) {
 				status = 1;
 				break;
